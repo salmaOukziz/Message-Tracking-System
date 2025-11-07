@@ -1,0 +1,214 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    platform: linux/arm64
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    platform: linux/arm64
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    platform: linux/arm64
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    ports:
+      - "28080:8080"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    platform: linux/arm64
+    ports:
+      - "18123:8123"
+      - "19000:9000"
+    environment:
+      CLICKHOUSE_DB: message_db
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:latest
+    platform: linux/arm64
+    ports:
+      - "33000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: vertamedia-clickhouse-datasource
+    depends_on:
+      - clickhouse
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  prometheus:
+    image: prom/prometheus:latest
+    platform: linux/arm64
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - kafka
+      - clickhouse
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    platform: linux/arm64
+    ports:
+      - "9100:9100"
+
+  # Exporters pour le monitoring
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    platform: linux/arm64
+    ports:
+      - "9308:9308"
+    environment:
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      - kafka
+
+  clickhouse-exporter:
+    image: prometheus-community/clickhouse-exporter:latest
+    platform: linux/arm64
+    ports:
+      - "9116:9116"
+    environment:
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_URL: http://clickhouse:8123
+    depends_on:
+      - clickhouse
+
+  # Producer Go - Updated for ARM64
+  producer-go:
+    build: 
+      context: ./producer-go
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ls", "/app/producer"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kafka Streams Services - Updated for ARM64
+  streams-clickhouse-sink:
+    build: 
+      context: ./streams-clickhouse-sink
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    depends_on:
+      kafka:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+      CLICKHOUSE_URL: clickhouse:8123  # ✅ CORRIGÉ: port 8123 pour HTTP
+      CLICKHOUSE_DB: message_db
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: password
+    restart: unless-stopped
+
+  streams-conversation-analytics:
+    build: 
+      context: ./streams-conversation-analytics
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+    restart: unless-stopped
+
+  streams-trend-detection:
+    build: 
+      context: ./streams-trend-detection
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+    restart: unless-stopped
+
+  streams-anomaly-detection:
+    build: 
+      context: ./streams-anomaly-detection
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKERS: kafka:9092
+    restart: unless-stopped
+
+  api-rest:
+    build: 
+      context: ./api-rest
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    container_name: api-rest
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - CLICKHOUSE_URL=clickhouse:8123  # ✅ CORRIGÉ: port 8123 pour HTTP
+    restart: unless-stopped

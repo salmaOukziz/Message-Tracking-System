@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: ClickHouse
+    type: vertamedia-clickhouse-datasource
+    access: proxy
+    url: http://clickhouse:8123
+    jsonData:
+      username: admin
+      password: password
+      defaultDatabase: message_db
+      timeout: 30
+      queryTimeout: 60

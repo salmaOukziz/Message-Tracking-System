@@ -1,0 +1,98 @@
+{
+  "dashboard": {
+    "title": "Message System Analytics",
+    "tags": ["messages", "kafka", "clickhouse"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Messages Overview",
+        "type": "stat",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT COUNT(*) as total_messages FROM messages",
+          "format": "table"
+        }],
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Unread Messages",
+        "type": "stat",
+        "datasource": "ClickHouse", 
+        "targets": [{
+          "rawSql": "SELECT COUNT(*) as unread FROM messages WHERE read_status = 'sent'",
+          "format": "table"
+        }],
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Active Users",
+        "type": "stat",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT COUNT(DISTINCT user_id) as active_users FROM user_stats WHERE last_active >= now() - INTERVAL 1 HOUR",
+          "format": "table"
+        }],
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Active Conversations",
+        "type": "stat",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT COUNT(*) as active_conv FROM conversation_metrics WHERE last_message_at >= now() - INTERVAL 1 HOUR",
+          "format": "table"
+        }],
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Messages Over Time",
+        "type": "timeseries",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT toStartOfMinute(created_at) as time, COUNT(*) as messages FROM messages GROUP BY time ORDER BY time",
+          "format": "time_series"
+        }],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+      },
+      {
+        "id": 6,
+        "title": "Message Status Distribution",
+        "type": "piechart",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT read_status, COUNT(*) as count FROM messages GROUP BY read_status",
+          "format": "table"
+        }],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}
+      },
+      {
+        "id": 7,
+        "title": "Top Active Users",
+        "type": "bargauge",
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT user_id, message_count FROM user_stats ORDER BY message_count DESC LIMIT 10",
+          "format": "table"
+        }],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "Messages by Conversation",
+        "type": "bargauge", 
+        "datasource": "ClickHouse",
+        "targets": [{
+          "rawSql": "SELECT conversation_id, message_count FROM conversation_metrics ORDER BY message_count DESC LIMIT 10",
+          "format": "table"
+        }],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14}
+      }
+    ],
+    "time": {"from": "now-1h", "to": "now"}
+  }
+}

@@ -1,0 +1,7 @@
+[0m[[0m[0mdebug[0m] [0m[0mnot up to date. inChanged = true, force = false[0m
+[0m[[0m[0mdebug[0m] [0m[0mUpdating ProjectRef(uri("file:/Users/salma/message-tracking-system/streams-clickhouse-sink/project/"), "streams-clickhouse-sink-build")...[0m
+[0m[[0m[0minfo[0m] [0m[0mUpdating streams-clickhouse-sink-build[0m
+[0m[[0m[0minfo[0m] [0m[0mResolved streams-clickhouse-sink-build dependencies[0m
+[0m[[0m[0minfo[0m] [0m[0mFetching artifacts of streams-clickhouse-sink-build[0m
+[0m[[0m[0minfo[0m] [0m[0mFetched artifacts of streams-clickhouse-sink-build[0m
+[0m[[0m[0mdebug[0m] [0m[0mDone updating ProjectRef(uri("file:/Users/salma/message-tracking-system/streams-clickhouse-sink/project/"), "streams-clickhouse-sink-build")[0m
