@@ -61,7 +61,7 @@ var (
 )
 
 func main() {
-	fmt.Println("🚀 Starting Kafka Producer with Sarama...")
+	fmt.Println(" Starting Kafka Producer with Sarama...")
 
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
@@ -73,8 +73,8 @@ func main() {
 	}
 	defer producer.Close()
 
-	fmt.Println("✅ Connected to Kafka!")
-	fmt.Printf("📨 Producing messages to Kafka...\n\n")
+	fmt.Println(" Connected to Kafka!")
+	fmt.Printf(" Producing messages to Kafka...\n\n")
 
 	messageCount := 0
 	topicKeys := []string{"work", "social", "tech"}
@@ -117,9 +117,9 @@ func main() {
 
 		partition, offset, err := producer.SendMessage(msg)
 		if err != nil {
-			fmt.Printf("❌ Failed to send message: %v\n", err)
+			fmt.Printf(" Failed to send message: %v\n", err)
 		} else {
-			fmt.Printf("💬 [%s] %s → %s: %s (partition: %d, offset: %d)\n",
+			fmt.Printf(" [%s] %s → %s: %s (partition: %d, offset: %d)\n",
 				message.ConversationID, message.SenderID, message.ReceiverID,
 				message.Content, partition, offset)
 
@@ -161,7 +161,7 @@ func sendMessageView(producer sarama.SyncProducer, messageID string, userID stri
 
 	_, _, err := producer.SendMessage(msg)
 	if err != nil {
-		fmt.Printf("❌ Failed to send message view: %v\n", err)
+		fmt.Printf(" Failed to send message view: %v\n", err)
 	} else {
 		fmt.Printf("👀 Message view: %s read by %s\n", messageID, userID)
 	}
@@ -202,7 +202,7 @@ func cleanupRecentMessages() {
 		// Garder seulement les 50 derniers messages
 		if len(recentMessages) > 50 {
 			recentMessages = recentMessages[len(recentMessages)-50:]
-			fmt.Printf("🧹 Cleaned up recent messages, keeping last 50\n")
+			fmt.Printf(" Cleaned up recent messages, keeping last 50\n")
 		}
 	}
 }
